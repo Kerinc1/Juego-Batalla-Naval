@@ -5,5 +5,7 @@ module com.batallanaval.batallanaval {
     requires org.kordamp.bootstrapfx.core;
 
     opens com.batallanaval.batallanaval to javafx.fxml;
+    opens com.batallanaval.batallanaval.controller to javafx.fxml;
+    opens com.batallanaval.batallanaval.model to javafx.fxml;
     exports com.batallanaval.batallanaval;
 }
