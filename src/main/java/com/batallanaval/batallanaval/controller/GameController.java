@@ -1,10 +1,13 @@
 package com.batallanaval.batallanaval.controller;
 
 import com.batallanaval.batallanaval.model.Board;
+import com.batallanaval.batallanaval.model.GamePersistence;
+import com.batallanaval.batallanaval.model.GameState;
+import com.batallanaval.batallanaval.model.IAttackStrategy;
 import com.batallanaval.batallanaval.model.Posicion;
+import com.batallanaval.batallanaval.model.RandomAIMoveStrategy;
 import com.batallanaval.batallanaval.model.Ship;
 import com.batallanaval.batallanaval.model.ShotResult;
-import com.batallanaval.batallanaval.model.Orientacion;
 import com.batallanaval.batallanaval.util.Constantes;
 import javafx.animation.FadeTransition;
 import javafx.fxml.FXML;
@@ -19,7 +22,9 @@ import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Controlador de la pantalla principal de juego.
@@ -35,7 +40,12 @@ public class GameController {
     private Board playerBoard;
     private Board enemyBoard;
     private Rectangle[][] enemyRectangles = new Rectangle[Constantes.TABLERO_TAMAÑO][Constantes.TABLERO_TAMAÑO];
+    private Rectangle[][] playerRectangles = new Rectangle[Constantes.TABLERO_TAMAÑO][Constantes.TABLERO_TAMAÑO];
     private boolean jugadorTurno;
+    private boolean partidaActiva;
+    private String jugadorNickname = "Jugador";
+    private final IAttackStrategy aiStrategy = new RandomAIMoveStrategy();
+    private final GamePersistence persistence = new GamePersistence();
 
     @FXML
     public void initialize() {
@@ -89,7 +99,9 @@ public class GameController {
                 int x = 35 + columna * Constantes.TAMAÑO_CASILLA;
                 int y = 35 + fila * Constantes.TAMAÑO_CASILLA;
                 Rectangle celda = crearCasilla(x, y);
-                if (!mostrarBarcos) {
+                if (mostrarBarcos) {
+                    playerRectangles[fila][columna] = celda;
+                } else {
                     enemyRectangles[fila][columna] = celda;
                     celda.setOnMouseEntered(event -> celda.setFill(Color.web("#90D4F0")));
                     celda.setOnMouseExited(event -> casillaFillOnHover(celda));
@@ -114,7 +126,7 @@ public class GameController {
     }
 
     private void manejarDisparo(MouseEvent event, int fila, int columna, Rectangle casilla) {
-        if (!jugadorTurno) {
+        if (!jugadorTurno || !partidaActiva) {
             return;
         }
         if (casilla.getUserData() != null) {
@@ -129,11 +141,15 @@ public class GameController {
 
             if (resultado == ShotResult.WATER) {
                 jugadorTurno = false;
-                statusLabel.setText("Agua. Turno de la máquina (no implementado todavía).");
+                statusLabel.setText("Agua. Turno de la máquina.");
+                guardarEstado();
+                ejecutarTurnoMaquina();
             } else if (resultado == ShotResult.HIT) {
                 statusLabel.setText("Tocado. Dispara nuevamente.");
+                guardarEstado();
             } else if (resultado == ShotResult.SUNK) {
                 statusLabel.setText("Hundido. Continúa disparando.");
+                guardarEstado();
                 if (enemyBoard.allShipsSunk()) {
                     mostrarVictoria();
                 }
@@ -186,6 +202,61 @@ public class GameController {
         }
     }
 
+    private void mostrarResultadoMaquina(Posicion posicion, ShotResult resultado) {
+        Rectangle casilla = playerRectangles[posicion.getFila()][posicion.getColumna()];
+        if (casilla == null) {
+            return;
+        }
+        casilla.setDisable(true);
+        if (resultado == ShotResult.WATER) {
+            casilla.setFill(Color.web("#AED6F1"));
+            Line linea1 = new Line(casilla.getLayoutX() + 10, casilla.getLayoutY() + 10,
+                    casilla.getLayoutX() + Constantes.TAMAÑO_CASILLA - 12,
+                    casilla.getLayoutY() + Constantes.TAMAÑO_CASILLA - 12);
+            linea1.setStroke(Color.web("#4F5A65"));
+            linea1.setStrokeWidth(2);
+            Line linea2 = new Line(casilla.getLayoutX() + Constantes.TAMAÑO_CASILLA - 12,
+                    casilla.getLayoutY() + 10,
+                    casilla.getLayoutX() + 10,
+                    casilla.getLayoutY() + Constantes.TAMAÑO_CASILLA - 12);
+            linea2.setStroke(Color.web("#4F5A65"));
+            linea2.setStrokeWidth(2);
+            playerBoardPane.getChildren().addAll(linea1, linea2);
+            animarImpacto(linea1, linea2);
+        } else if (resultado == ShotResult.HIT) {
+            casilla.setFill(Color.web("#F1948A"));
+            Circle punto = new Circle(casilla.getLayoutX() + Constantes.TAMAÑO_CASILLA / 2 - 1,
+                    casilla.getLayoutY() + Constantes.TAMAÑO_CASILLA / 2 - 1, 8);
+            punto.setFill(Color.web("#E74C3C"));
+            playerBoardPane.getChildren().add(punto);
+            animarImpacto(punto);
+            statusLabel.setText("La máquina acertó en " + obtenerCoordenada(posicion) + ".");
+        } else if (resultado == ShotResult.SUNK) {
+            Ship barcoHundido = playerBoard.getCell(posicion.getFila(), posicion.getColumna()).getShip();
+            if (barcoHundido != null) {
+                for (Posicion pos : barcoHundido.getCasillasOcupadas()) {
+                    Rectangle objetivo = playerRectangles[pos.getFila()][pos.getColumna()];
+                    if (objetivo != null) {
+                        objetivo.setDisable(true);
+                        objetivo.setFill(Color.web("#7F8790"));
+                    }
+                    Circle impacto = new Circle(35 + pos.getColumna() * Constantes.TAMAÑO_CASILLA + Constantes.TAMAÑO_CASILLA / 2 - 1,
+                            35 + pos.getFila() * Constantes.TAMAÑO_CASILLA + Constantes.TAMAÑO_CASILLA / 2 - 1, 6);
+                    impacto.setFill(Color.web("#E74C3C"));
+                    playerBoardPane.getChildren().add(impacto);
+                }
+                animarImpacto();
+                statusLabel.setText("La máquina hundió un barco en " + obtenerCoordenada(posicion) + ".");
+            }
+        }
+    }
+
+    private String obtenerCoordenada(Posicion posicion) {
+        char columna = (char) ('A' + posicion.getColumna());
+        int fila = posicion.getFila() + 1;
+        return columna + String.valueOf(fila);
+    }
+
     private void casillaFillOnHover(Rectangle casilla) {
         if (casilla.getUserData() == ShotResult.SUNK || casilla.isDisabled()) {
             casilla.setFill(Color.web("#7F8790"));
@@ -212,7 +283,26 @@ public class GameController {
         alerta.setContentText("Todos los barcos enemigos han sido hundidos.");
         alerta.showAndWait();
         jugadorTurno = false;
+        partidaActiva = false;
         statusLabel.setText("Partida finalizada. Has ganado.");
+        guardarEstado();
+    }
+
+    private void mostrarDerrota() {
+        Alert alerta = new Alert(Alert.AlertType.INFORMATION);
+        alerta.setTitle("Derrota");
+        alerta.setHeaderText("¡Has perdido!");
+        alerta.setContentText("La flota del jugador ha sido destruida.");
+        alerta.showAndWait();
+        jugadorTurno = false;
+        partidaActiva = false;
+        statusLabel.setText("Partida finalizada. Ha ganado la máquina.");
+        guardarEstado();
+    }
+
+    public void guardarEstado() {
+        GameState estado = new GameState(playerBoard, enemyBoard, jugadorTurno, jugadorNickname);
+        persistence.guardar(estado);
     }
 
     private void mostrarAlerta(String titulo, String contenido) {
@@ -246,5 +336,81 @@ public class GameController {
                 tableroPane.getChildren().add(segmento);
             }
         }
+    }
+
+    public void setEnemyBoard(Board enemyBoard) {
+        this.enemyBoard = enemyBoard;
+        aiStrategy.reiniciar(this.playerBoard);
+        if (this.playerBoard != null && this.enemyBoard != null) {
+            comenzarPartida();
+        }
+    }
+
+    public void setPlayerNickname(String jugadorNickname) {
+        this.jugadorNickname = jugadorNickname;
+    }
+
+    public void cargarEstado(GameState estado) {
+        this.playerBoard = estado.getPlayerBoard();
+        this.enemyBoard = estado.getEnemyBoard();
+        this.jugadorTurno = estado.isJugadorTurno();
+        this.jugadorNickname = estado.getJugadorNickname();
+        this.partidaActiva = !estado.estaTerminada();
+        this.aiStrategy.reiniciar(playerBoard);
+        playerBoardPane.getChildren().clear();
+        enemyBoardPane.getChildren().clear();
+        configurarTablero(playerBoardPane, playerBoard, true);
+        configurarTablero(enemyBoardPane, enemyBoard, false);
+        mostrarBarcos(playerBoard, playerBoardPane);
+        statusLabel.setText(jugadorTurno ? "Turno del jugador." : "Turno de la máquina.");
+        if (!jugadorTurno) {
+            ejecutarTurnoMaquina();
+        }
+    }
+
+    private void comenzarPartida() {
+        playerBoardPane.getChildren().clear();
+        enemyBoardPane.getChildren().clear();
+        configurarTablero(playerBoardPane, playerBoard, true);
+        configurarTablero(enemyBoardPane, enemyBoard, false);
+        mostrarBarcos(playerBoard, playerBoardPane);
+        jugadorTurno = true;
+        partidaActiva = true;
+        statusLabel.setText("Turno del jugador. Dispara sobre el tablero enemigo.");
+    }
+
+    private void ejecutarTurnoMaquina() {
+        if (!partidaActiva) {
+            return;
+        }
+        Posicion seleccion = aiStrategy.seleccionarSiguienteDisparo(playerBoard);
+        try {
+            ShotResult resultado = playerBoard.shoot(seleccion.getFila(), seleccion.getColumna());
+            mostrarResultadoMaquina(seleccion, resultado);
+            if (resultado == ShotResult.WATER) {
+                jugadorTurno = true;
+                statusLabel.setText("La máquina falló en " + obtenerCoordenada(seleccion) + ". Tu turno.");
+            } else if (resultado == ShotResult.HIT) {
+                if (playerBoard.allShipsSunk()) {
+                    mostrarDerrota();
+                    return;
+                }
+                statusLabel.setText("La máquina acertó en " + obtenerCoordenada(seleccion) + ". Sigue disparando.");
+                ejecutarTurnoMaquina();
+                return;
+            } else if (resultado == ShotResult.SUNK) {
+                if (playerBoard.allShipsSunk()) {
+                    mostrarDerrota();
+                    return;
+                }
+                statusLabel.setText("La máquina hundió un barco en " + obtenerCoordenada(seleccion) + ". Sigue disparando.");
+                ejecutarTurnoMaquina();
+                return;
+            }
+        } catch (IllegalArgumentException ex) {
+            ejecutarTurnoMaquina();
+            return;
+        }
+        guardarEstado();
     }
 }

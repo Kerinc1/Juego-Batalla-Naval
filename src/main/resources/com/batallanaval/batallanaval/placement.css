@@ -50,6 +50,22 @@
     -fx-background-color: #F0A400;
 }
 
+.button-primary {
+    -fx-background-color: #4A90E2;
+}
+
+.button-primary:hover {
+    -fx-background-color: #357ABD;
+}
+
+.button-secondary {
+    -fx-background-color: #7B8EF8;
+}
+
+.button-secondary:hover {
+    -fx-background-color: #5E74DF;
+}
+
 .label {
     -fx-text-fill: #333333;
     -fx-font-size: 12;

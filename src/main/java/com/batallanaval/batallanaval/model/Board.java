@@ -1,12 +1,15 @@
 package com.batallanaval.batallanaval.model;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Representa un tablero completo que conoce todas sus casillas y barcos.
  */
-public class Board {
+public class Board implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     private static final int TAMAÑO_TABLERO = 10;
     private final Cell[][] celdas;
     private final List<Ship> barcos;
@@ -83,6 +86,14 @@ public class Board {
 
     public boolean allShipsSunk() {
         return barcos.stream().allMatch(Ship::estaHundido);
+    }
+
+    public int countSunkShips() {
+        return (int) barcos.stream().filter(Ship::estaHundido).count();
+    }
+
+    public boolean isCellDisparada(int fila, int columna) {
+        return getCell(fila, columna).fueDisparada();
     }
 
     private boolean posicionValida(int fila, int columna) {

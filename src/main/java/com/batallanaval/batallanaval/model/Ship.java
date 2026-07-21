@@ -1,12 +1,15 @@
 package com.batallanaval.batallanaval.model;
 
+import java.io.Serializable;
 import java.util.HashSet;
 import java.util.Set;
 
 /**
  * Representa un barco dentro del tablero durante la partida.
  */
-public class Ship {
+public class Ship implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     private final String id;
     private final String nombre;
     private final int tamaño;
