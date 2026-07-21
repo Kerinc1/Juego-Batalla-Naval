@@ -1,9 +1,13 @@
 package com.batallanaval.batallanaval.model;
 
+import java.io.Serializable;
+
 /**
  * Representa una posición en el tablero.
  */
-public class Posicion {
+public class Posicion implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     private final int fila;
     private final int columna;
 

@@ -23,6 +23,8 @@ import com.batallanaval.batallanaval.util.DibujadorBarcos;
 import java.io.IOException;
 import java.util.*;
 
+import com.batallanaval.batallanaval.model.RandomBoardGenerator;
+
 /**
  * Controlador de la interfaz de colocación de barcos.
  */
@@ -48,6 +50,7 @@ public class PlacementController {
     private Barco barcoEnArrastre;
     private Map<String, Group> visualesBarcos;
     private Map<String, Node> nodosBarco;
+    private String nickname;
     private final double margenCoordenadas = 35;
 
     /**
@@ -374,6 +377,9 @@ public class PlacementController {
             Scene escena = new Scene(loader.load());
             GameController controlador = loader.getController();
             controlador.setPlayerShips(crearShipsDesdeFlota());
+            controlador.setEnemyBoard(new RandomBoardGenerator().generarTableroEnemigo());
+            controlador.setPlayerNickname(nickname);
+            controlador.guardarEstado();
 
             Stage escenario = (Stage) botonIniciarPartida.getScene().getWindow();
             escenario.setTitle("Batalla Naval - Partida");
@@ -385,6 +391,11 @@ public class PlacementController {
             e.printStackTrace();
             etiquetaEstado.setText("No se pudo iniciar la partida.");
         }
+    }
+
+    public void setNickname(String nickname) {
+        this.nickname = nickname;
+        actualizarEstado();
     }
 
     private java.util.List<Ship> crearShipsDesdeFlota() {

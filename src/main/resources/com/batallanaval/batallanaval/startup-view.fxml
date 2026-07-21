@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<BorderPane xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.batallanaval.batallanaval.controller.StartupController" style="-fx-background-color: #D7ECF8;">
+    <top>
+        <VBox alignment="CENTER" spacing="12" style="-fx-padding: 28; -fx-background-color: #4A90E2; -fx-alignment: center;">
+            <Label text="BATALLA NAVAL" style="-fx-font-size: 28; -fx-font-weight: bold; -fx-text-fill: white;" />
+            <Label text="Inicia una partida nueva, carga tu última sesión o revisa el tablero enemigo." style="-fx-font-size: 14; -fx-text-fill: rgba(255,255,255,0.85);" />
+        </VBox>
+    </top>
+    <center>
+        <VBox alignment="CENTER" spacing="20" style="-fx-padding: 24 36 24 36;">
+            <HBox spacing="12" alignment="CENTER_LEFT">
+                <Label text="Nickname:" style="-fx-font-size: 14; -fx-font-weight: bold; -fx-text-fill: #2D3B46;" />
+                <TextField fx:id="nicknameField" promptText="Ingresa tu nombre" prefWidth="280" />
+            </HBox>
+            <HBox spacing="16" alignment="CENTER">
+                <Button fx:id="btnNuevoJuego" text="Nueva partida" prefWidth="150" styleClass="button-warning" />
+                <Button fx:id="btnCargarPartida" text="Cargar partida" prefWidth="150" styleClass="button-primary" />
+                <Button fx:id="btnMostrarTablero" text="Ver tablero oponente" prefWidth="170" styleClass="button-secondary" />
+            </HBox>
+            <Label fx:id="lblEstado" text="" wrapText="true" style="-fx-font-size: 12; -fx-text-fill: #4F5A65;" />
+        </VBox>
+    </center>
+</BorderPane>

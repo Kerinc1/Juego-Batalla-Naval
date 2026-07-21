@@ -1,9 +1,13 @@
 package com.batallanaval.batallanaval.model;
 
+import java.io.Serializable;
+
 /**
  * Representa una casilla del tablero con su estado mínimo.
  */
-public class Cell {
+public class Cell implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     private final int fila;
     private final int columna;
     private Ship ship;
