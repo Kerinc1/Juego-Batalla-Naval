@@ -14,8 +14,8 @@ public class HelloApplication extends Application {
         Scene scene = new Scene(fxmlLoader.load());
         stage.setTitle("Batalla Naval - Colocación de barcos");
         stage.setScene(scene);
-        stage.setMinWidth(1100);
-        stage.setMinHeight(840);
+        stage.setMinWidth(1400);
+        stage.setMinHeight(860);
         stage.setMaximized(true);
         stage.show();
     }
