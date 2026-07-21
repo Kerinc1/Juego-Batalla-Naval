@@ -1,10 +1,12 @@
 package com.batallanaval.batallanaval.controller;
 
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.geometry.Pos;
 import javafx.scene.Cursor;
 import javafx.scene.Group;
 import javafx.scene.Node;
+import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.effect.DropShadow;
@@ -13,10 +15,12 @@ import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
+import javafx.stage.Stage;
 import com.batallanaval.batallanaval.model.*;
 import com.batallanaval.batallanaval.util.Constantes;
 import com.batallanaval.batallanaval.util.DibujadorBarcos;
 
+import java.io.IOException;
 import java.util.*;
 
 /**
@@ -361,9 +365,42 @@ public class PlacementController {
      * Inicia la partida.
      */
     private void iniciarPartida() {
-        if (flota.estáCompletaColocada()) {
-            etiquetaEstado.setText("¡Partida iniciada! Flota lista para jugar.");
+        if (!flota.estáCompletaColocada()) {
+            return;
         }
+
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/batallanaval/batallanaval/game-view.fxml"));
+            Scene escena = new Scene(loader.load());
+            GameController controlador = loader.getController();
+            controlador.setPlayerShips(crearShipsDesdeFlota());
+
+            Stage escenario = (Stage) botonIniciarPartida.getScene().getWindow();
+            escenario.setTitle("Batalla Naval - Partida");
+            escenario.setScene(escena);
+            escenario.setMinWidth(1100);
+            escenario.setMinHeight(840);
+            escenario.show();
+        } catch (IOException e) {
+            e.printStackTrace();
+            etiquetaEstado.setText("No se pudo iniciar la partida.");
+        }
+    }
+
+    private java.util.List<Ship> crearShipsDesdeFlota() {
+        return flota.obtenerColocados().stream()
+            .map(this::crearShipDesdeBarco)
+            .toList();
+    }
+
+    private Ship crearShipDesdeBarco(Barco barco) {
+        return new Ship(
+            barco.getId(),
+            barco.getTipo().getNombre(),
+            barco.getTipo().getTamaño(),
+            barco.getOrientacion(),
+            barco.getPosicion()
+        );
     }
 
     /**
