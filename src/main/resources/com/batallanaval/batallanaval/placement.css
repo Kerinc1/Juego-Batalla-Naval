@@ -1,0 +1,115 @@
+/* Estilos generales */
+* {
+    -fx-font-family: "Segoe UI", Arial, sans-serif;
+}
+
+.button {
+    -fx-font-size: 12;
+    -fx-padding: 10;
+    -fx-background-color: #4A90E2;
+    -fx-text-fill: white;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-cursor: hand;
+    -fx-font-weight: bold;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 4, 0.3, 0, 1);
+    -fx-transition: all 0.15s ease;
+}
+
+.button:hover {
+    -fx-background-color: #357ABD;
+    -fx-scale-x: 1.02;
+    -fx-scale-y: 1.02;
+}
+
+.button:pressed {
+    -fx-background-color: #2A5FA3;
+}
+
+.button:disabled {
+    -fx-background-color: #CCCCCC;
+    -fx-text-fill: #999999;
+    -fx-opacity: 0.6;
+    -fx-cursor: default;
+    -fx-effect: none;
+}
+
+.button-danger {
+    -fx-background-color: #E85D75;
+}
+
+.button-danger:hover {
+    -fx-background-color: #D14963;
+}
+
+.button-warning {
+    -fx-background-color: #FFB700;
+}
+
+.button-warning:hover {
+    -fx-background-color: #F0A400;
+}
+
+.button-primary {
+    -fx-background-color: #4A90E2;
+}
+
+.button-primary:hover {
+    -fx-background-color: #357ABD;
+}
+
+.button-secondary {
+    -fx-background-color: #7B8EF8;
+}
+
+.button-secondary:hover {
+    -fx-background-color: #5E74DF;
+}
+
+.label {
+    -fx-text-fill: #333333;
+    -fx-font-size: 12;
+}
+
+.root {
+    -fx-background-color: #D7ECF8;
+}
+
+.panel-container {
+    -fx-border-color: #D9E6F1;
+    -fx-border-radius: 10;
+    -fx-background-color: #FFFFFF;
+    -fx-padding: 16;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.12), 8, 0.2, 0, 2);
+}
+
+.flota-panel {
+    -fx-padding: 10;
+    -fx-border-color: #E6EEF5;
+    -fx-border-radius: 8;
+    -fx-background-color: #F7FBFF;
+}
+
+.header {
+    -fx-background-color: #4A90E2;
+    -fx-padding: 10;
+}
+
+.header .label {
+    -fx-text-fill: white;
+    -fx-font-size: 20;
+    -fx-font-weight: bold;
+}
+
+.board-pane {
+    -fx-background-color: #EAF7FC;
+    -fx-border-color: #2F5066;
+    -fx-border-width: 2;
+    -fx-border-radius: 8;
+}
+
+.board-pane.board-invalid {
+    -fx-border-color: #E74C3C;
+    -fx-border-width: 3;
+}
+
