@@ -23,10 +23,6 @@
             <VBox fx:id="panelIzquierdo" spacing="15" styleClass="panel-container" prefWidth="280" VBox.vgrow="ALWAYS">
                 <Label text="Nombre:" style="-fx-font-size: 13; -fx-font-weight: bold; -fx-text-fill: #2D3B46;" />
                 <TextField fx:id="nombreField" promptText="Ingresa tu nombre" />
-                <HBox spacing="8">
-                    <Button fx:id="botonIniciarSesion" text="Iniciar sesión" HBox.hgrow="ALWAYS" />
-                    <Button fx:id="botonMostrarTablero" text="Ver oponente" HBox.hgrow="ALWAYS" />
-                </HBox>
                 <ScrollPane fitToWidth="true" fitToHeight="true" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS" style="-fx-background-color: transparent; -fx-border-color: transparent;" prefHeight="520">
                     <content>
                         <VBox fx:id="flotaDisponibleVBox" spacing="12" styleClass="flota-panel"/>
@@ -37,7 +33,8 @@
 
                 <Button fx:id="botonRotar" text="Rotar (R)" prefWidth="220"/>
                 <Button fx:id="botonReiniciar" text="Reiniciar" prefWidth="220" styleClass="button-danger"/>
-                <Button fx:id="botonIniciarPartida" text="Iniciar Partida" disable="true" prefWidth="220" styleClass="button-warning"/>
+                <Button fx:id="botonMostrarTablero" text="Ver oponente" prefWidth="220"/>
+                <Button fx:id="botonIniciarPartida" text="Iniciar Partida" disable="false" prefWidth="220" styleClass="button-warning"/>
 
                 <Label fx:id="etiquetaEstado" text="Barcos colocados: 0/10" style="-fx-font-size: 11; -fx-text-fill: #666666; -fx-wrap-text: true;"/>
             </VBox>

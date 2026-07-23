@@ -329,7 +329,7 @@ public class GameController {
 
     public void guardarEstado() {
         GameState estado = new GameState(playerBoard, enemyBoard, jugadorTurno, jugadorNickname);
-        persistence.guardar(estado);
+        persistence.guardar(estado, jugadorNickname);
     }
 
     private void mostrarAlerta(String titulo, String contenido) {
