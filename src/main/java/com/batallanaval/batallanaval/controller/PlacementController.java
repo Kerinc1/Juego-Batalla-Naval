@@ -9,6 +9,7 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.TextField;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.input.*;
 import javafx.scene.layout.Pane;
@@ -43,6 +44,12 @@ public class PlacementController {
     private Button botonIniciarPartida;
     @FXML
     private Label etiquetaEstado;
+    @FXML
+    private TextField nombreField;
+    @FXML
+    private Button botonCargarPartida;
+    @FXML
+    private Button botonMostrarTablero;
 
     private Flota flota;
     private Tablero tablero;
@@ -51,6 +58,8 @@ public class PlacementController {
     private Map<String, Group> visualesBarcos;
     private Map<String, Node> nodosBarco;
     private String nickname;
+    private Board tableroEnemigo;
+    private final GamePersistence persistence = new GamePersistence();
     private final double margenCoordenadas = 35;
 
     /**
@@ -60,6 +69,7 @@ public class PlacementController {
     public void initialize() {
         flota = new Flota();
         tablero = new Tablero();
+        tableroEnemigo = new RandomBoardGenerator().generarTableroEnemigo();
         visualesBarcos = new HashMap<>();
         nodosBarco = new HashMap<>();
         barcoSeleccionado = null;
@@ -187,6 +197,8 @@ public class PlacementController {
         botonRotar.setOnAction(e -> rotarBarcoSeleccionado());
         botonReiniciar.setOnAction(e -> reiniciarFlota());
         botonIniciarPartida.setOnAction(e -> iniciarPartida());
+        botonCargarPartida.setOnAction(e -> cargarPartida());
+        botonMostrarTablero.setOnAction(e -> mostrarTableroOponente());
     }
 
     /**
@@ -372,13 +384,20 @@ public class PlacementController {
             return;
         }
 
+        String nombre = obtenerNombre();
+        if (nombre.isEmpty()) {
+            etiquetaEstado.setText("Debes ingresar un nombre para iniciar la partida.");
+            nombreField.requestFocus();
+            return;
+        }
+
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/batallanaval/batallanaval/game-view.fxml"));
             Scene escena = new Scene(loader.load());
             GameController controlador = loader.getController();
             controlador.setPlayerShips(crearShipsDesdeFlota());
-            controlador.setEnemyBoard(new RandomBoardGenerator().generarTableroEnemigo());
-            controlador.setPlayerNickname(nickname);
+            controlador.setEnemyBoard(tableroEnemigo);
+            controlador.setPlayerNickname(nombre);
             controlador.guardarEstado();
 
             Stage escenario = (Stage) botonIniciarPartida.getScene().getWindow();
@@ -395,7 +414,67 @@ public class PlacementController {
 
     public void setNickname(String nickname) {
         this.nickname = nickname;
+        if (nombreField != null) {
+            nombreField.setText(nickname);
+        }
         actualizarEstado();
+    }
+
+    private String obtenerNombre() {
+        return nombreField.getText().trim();
+    }
+
+    private void cargarPartida() {
+        try {
+            GameState estado = persistence.cargar();
+            if (estado == null || estado.estaTerminada()) {
+                etiquetaEstado.setText("No hay una partida válida para cargar.");
+                return;
+            }
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/batallanaval/batallanaval/game-view.fxml"));
+            Scene escena = new Scene(loader.load());
+            GameController controlador = loader.getController();
+            controlador.cargarEstado(estado);
+            Stage escenario = (Stage) botonCargarPartida.getScene().getWindow();
+            escenario.setTitle("Batalla Naval - Partida cargada");
+            escenario.setScene(escena);
+            escenario.show();
+        } catch (IOException e) {
+            etiquetaEstado.setText("No se pudo cargar la partida guardada.");
+        }
+    }
+
+    private void mostrarTableroOponente() {
+        Stage escenario = new Stage();
+        escenario.setTitle("Tablero oponente");
+        Pane pane = new Pane();
+        pane.setPrefSize(420, 420);
+        pane.setStyle("-fx-background-color: #EAF7FC; -fx-border-color: #2F5066; -fx-border-width: 2; -fx-padding: 12;");
+        double offset = 35;
+        for (int fila = 0; fila < Constantes.TABLERO_TAMAÑO; fila++) {
+            Label etiqueta = new Label(String.valueOf(fila + 1));
+            etiqueta.setLayoutX(8);
+            etiqueta.setLayoutY(offset + fila * Constantes.TAMAÑO_CASILLA + 10);
+            pane.getChildren().add(etiqueta);
+        }
+        for (int columna = 0; columna < Constantes.TABLERO_TAMAÑO; columna++) {
+            Label etiqueta = new Label(String.valueOf((char) ('A' + columna)));
+            etiqueta.setLayoutX(offset + columna * Constantes.TAMAÑO_CASILLA + 12);
+            etiqueta.setLayoutY(8);
+            pane.getChildren().add(etiqueta);
+        }
+        for (int fila = 0; fila < Constantes.TABLERO_TAMAÑO; fila++) {
+            for (int columna = 0; columna < Constantes.TABLERO_TAMAÑO; columna++) {
+                Rectangle celda = new Rectangle(Constantes.TAMAÑO_CASILLA - 2, Constantes.TAMAÑO_CASILLA - 2);
+                celda.setFill(tableroEnemigo.getCell(fila, columna).tieneBarco() ? Color.web("#7F8790") : Color.web("#B8E0F0"));
+                celda.setStroke(Color.web("#666666"));
+                celda.setLayoutX(offset + columna * Constantes.TAMAÑO_CASILLA);
+                celda.setLayoutY(offset + fila * Constantes.TAMAÑO_CASILLA);
+                pane.getChildren().add(celda);
+            }
+        }
+        escenario.setScene(new Scene(pane));
+        escenario.show();
     }
 
     private java.util.List<Ship> crearShipsDesdeFlota() {

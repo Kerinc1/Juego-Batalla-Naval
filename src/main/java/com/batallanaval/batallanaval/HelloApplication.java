@@ -10,12 +10,12 @@ import java.io.IOException;
 public class HelloApplication extends Application {
     @Override
     public void start(Stage stage) throws IOException {
-        FXMLLoader fxmlLoader = new FXMLLoader(HelloApplication.class.getResource("startup-view.fxml"));
+        FXMLLoader fxmlLoader = new FXMLLoader(HelloApplication.class.getResource("placement-view.fxml"));
         Scene scene = new Scene(fxmlLoader.load());
-        stage.setTitle("Batalla Naval - Inicio");
+        stage.setTitle("Batalla Naval - Colocación de barcos");
         stage.setScene(scene);
-        stage.setMinWidth(700);
-        stage.setMinHeight(420);
+        stage.setMinWidth(1020);
+        stage.setMinHeight(750);
         stage.show();
     }
 }
