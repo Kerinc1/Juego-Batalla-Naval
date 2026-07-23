@@ -392,16 +392,26 @@ public class PlacementController {
         boolean hayPartidaNoTerminada = partidaGuardada != null && !partidaGuardada.estaTerminada();
 
         if (hayPartidaNoTerminada) {
-            ButtonType continuar = new ButtonType("Cargar partida anterior");
+            ButtonType continuar = new ButtonType("Cargar partida anterior", ButtonBar.ButtonData.YES);
             ButtonType nueva = new ButtonType("Iniciar nueva partida", ButtonBar.ButtonData.OK_DONE);
-            Alert dialogo = new Alert(Alert.AlertType.CONFIRMATION);
+            ButtonType cancelar = new ButtonType("Cancelar", ButtonBar.ButtonData.CANCEL_CLOSE);
+            Alert dialogo = new Alert(Alert.AlertType.NONE);
             dialogo.setTitle("Partida guardada");
             dialogo.setHeaderText("Ya tienes una partida sin terminar");
             dialogo.setContentText("¿Quieres cargar la partida anterior o iniciar una nueva partida?");
-            dialogo.getButtonTypes().setAll(continuar, nueva);
+            dialogo.getButtonTypes().setAll(continuar, nueva, cancelar);
 
-            ButtonType opcion = dialogo.showAndWait().orElse(nueva);
-            if (opcion == continuar) {
+            Node botonCancelar = dialogo.getDialogPane().lookupButton(cancelar);
+            if (botonCancelar != null) {
+                botonCancelar.setVisible(false);
+                botonCancelar.setManaged(false);
+            }
+
+            Optional<ButtonType> opcion = dialogo.showAndWait();
+            if (opcion.isEmpty() || opcion.get() == cancelar) {
+                return;
+            }
+            if (opcion.get() == continuar) {
                 cargarPartidaGuardada(partidaGuardada);
                 return;
             }
