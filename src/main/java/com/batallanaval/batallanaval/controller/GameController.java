@@ -9,10 +9,15 @@ import com.batallanaval.batallanaval.model.RandomAIMoveStrategy;
 import com.batallanaval.batallanaval.model.Ship;
 import com.batallanaval.batallanaval.model.ShotResult;
 import com.batallanaval.batallanaval.util.Constantes;
+import com.batallanaval.batallanaval.HelloApplication;
 import javafx.animation.FadeTransition;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.scene.Cursor;
 import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
@@ -20,11 +25,12 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.Scene;
+import javafx.stage.Stage;
 import javafx.util.Duration;
 
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
+import java.io.IOException;
 
 /**
  * Controlador de la pantalla principal de juego.
@@ -36,6 +42,8 @@ public class GameController {
     private Pane enemyBoardPane;
     @FXML
     private Label statusLabel;
+    @FXML
+    private Button volverInicioButton;
 
     private Board playerBoard;
     private Board enemyBoard;
@@ -52,6 +60,8 @@ public class GameController {
         playerBoard = new Board();
         enemyBoard = new Board();
         jugadorTurno = true;
+        partidaActiva = false;
+        volverInicioButton.setDisable(true);
 
         configurarTablero(playerBoardPane, playerBoard, true);
         configurarTablero(enemyBoardPane, enemyBoard, false);
@@ -207,6 +217,7 @@ public class GameController {
         if (casilla == null) {
             return;
         }
+        casilla.setUserData(resultado);
         casilla.setDisable(true);
         if (resultado == ShotResult.WATER) {
             casilla.setFill(Color.web("#AED6F1"));
@@ -238,6 +249,7 @@ public class GameController {
                     Rectangle objetivo = playerRectangles[pos.getFila()][pos.getColumna()];
                     if (objetivo != null) {
                         objetivo.setDisable(true);
+                        objetivo.setUserData(ShotResult.SUNK);
                         objetivo.setFill(Color.web("#7F8790"));
                     }
                     Circle impacto = new Circle(35 + pos.getColumna() * Constantes.TAMAÑO_CASILLA + Constantes.TAMAÑO_CASILLA / 2 - 1,
@@ -258,10 +270,12 @@ public class GameController {
     }
 
     private void casillaFillOnHover(Rectangle casilla) {
-        if (casilla.getUserData() == ShotResult.SUNK || casilla.isDisabled()) {
+        if (casilla.getUserData() == ShotResult.SUNK) {
             casilla.setFill(Color.web("#7F8790"));
         } else if (casilla.getUserData() == ShotResult.HIT) {
             casilla.setFill(Color.web("#F1948A"));
+        } else if (casilla.getUserData() == ShotResult.WATER || casilla.isDisabled()) {
+            casilla.setFill(Color.web("#AED6F1"));
         } else {
             casilla.setFill(Color.web("#B8E0F0"));
         }
@@ -277,27 +291,40 @@ public class GameController {
     }
 
     private void mostrarVictoria() {
+        jugadorTurno = false;
+        partidaActiva = false;
+        volverInicioButton.setDisable(false);
+        statusLabel.setText("Partida finalizada. Has ganado.");
+        guardarEstado();
         Alert alerta = new Alert(Alert.AlertType.INFORMATION);
         alerta.setTitle("Victoria");
         alerta.setHeaderText("¡Has ganado!");
         alerta.setContentText("Todos los barcos enemigos han sido hundidos.");
-        alerta.showAndWait();
-        jugadorTurno = false;
-        partidaActiva = false;
-        statusLabel.setText("Partida finalizada. Has ganado.");
-        guardarEstado();
+        mostrarOpcionesFinales(alerta);
     }
 
     private void mostrarDerrota() {
+        jugadorTurno = false;
+        partidaActiva = false;
+        volverInicioButton.setDisable(false);
+        statusLabel.setText("Partida finalizada. Ha ganado la máquina.");
+        guardarEstado();
         Alert alerta = new Alert(Alert.AlertType.INFORMATION);
         alerta.setTitle("Derrota");
         alerta.setHeaderText("¡Has perdido!");
-        alerta.setContentText("La flota del jugador ha sido destruida.");
-        alerta.showAndWait();
-        jugadorTurno = false;
-        partidaActiva = false;
-        statusLabel.setText("Partida finalizada. Ha ganado la máquina.");
-        guardarEstado();
+        alerta.setContentText("Tu tropa ha sido destruida.");
+        mostrarOpcionesFinales(alerta);
+    }
+
+    private void mostrarOpcionesFinales(Alert alerta) {
+        ButtonType volver = new ButtonType("Volver al inicio");
+        ButtonType cerrar = new ButtonType("Cerrar", ButtonBar.ButtonData.CANCEL_CLOSE);
+        alerta.getButtonTypes().setAll(volver, cerrar);
+        alerta.showAndWait().ifPresent(opcion -> {
+            if (opcion == volver) {
+                volverAlInicio();
+            }
+        });
     }
 
     public void guardarEstado() {
@@ -362,6 +389,8 @@ public class GameController {
         configurarTablero(playerBoardPane, playerBoard, true);
         configurarTablero(enemyBoardPane, enemyBoard, false);
         mostrarBarcos(playerBoard, playerBoardPane);
+        restaurarDisparos(playerBoard, playerRectangles, playerBoardPane, false);
+        restaurarDisparos(enemyBoard, enemyRectangles, enemyBoardPane, true);
         statusLabel.setText(jugadorTurno ? "Turno del jugador." : "Turno de la máquina.");
         if (!jugadorTurno) {
             ejecutarTurnoMaquina();
@@ -412,5 +441,63 @@ public class GameController {
             return;
         }
         guardarEstado();
+    }
+
+    private void restaurarDisparos(Board board, Rectangle[][] rectangles, Pane pane, boolean esTableroEnemigo) {
+        for (int fila = 0; fila < board.getTamaño(); fila++) {
+            for (int columna = 0; columna < board.getTamaño(); columna++) {
+                if (!board.isCellDisparada(fila, columna)) {
+                    continue;
+                }
+                Rectangle casilla = rectangles[fila][columna];
+                ShotResult resultado = obtenerResultadoGuardado(board, fila, columna);
+                casilla.setUserData(resultado);
+                casilla.setDisable(true);
+                if (resultado == ShotResult.SUNK && !esPrimeraCasillaDelBarco(board, fila, columna)) {
+                    continue;
+                }
+                if (esTableroEnemigo) {
+                    mostrarResultadoVisual(casilla, fila, columna, resultado);
+                } else {
+                    mostrarResultadoMaquina(new Posicion(fila, columna), resultado);
+                }
+            }
+        }
+    }
+
+    private ShotResult obtenerResultadoGuardado(Board board, int fila, int columna) {
+        if (!board.getCell(fila, columna).tieneBarco()) {
+            return ShotResult.WATER;
+        }
+        Ship barco = board.getCell(fila, columna).getShip();
+        return barco.estaHundido() ? ShotResult.SUNK : ShotResult.HIT;
+    }
+
+    private boolean esPrimeraCasillaDelBarco(Board board, int fila, int columna) {
+        Ship barco = board.getCell(fila, columna).getShip();
+        if (barco == null) {
+            return true;
+        }
+        Posicion primera = barco.getCasillasOcupadas().stream()
+                .min((izquierda, derecha) -> {
+                    int comparacionFila = Integer.compare(izquierda.getFila(), derecha.getFila());
+                    return comparacionFila != 0 ? comparacionFila : Integer.compare(izquierda.getColumna(), derecha.getColumna());
+                })
+                .orElse(new Posicion(fila, columna));
+        return primera.getFila() == fila && primera.getColumna() == columna;
+    }
+
+    @FXML
+    private void volverAlInicio() {
+        try {
+            FXMLLoader loader = new FXMLLoader(HelloApplication.class.getResource("placement-view.fxml"));
+            Scene scene = new Scene(loader.load());
+            Stage stage = (Stage) volverInicioButton.getScene().getWindow();
+            stage.setTitle("Batalla Naval - Colocación de barcos");
+            stage.setScene(scene);
+            stage.show();
+        } catch (IOException ex) {
+            mostrarAlerta("Error", "No se pudo volver a la pantalla inicial.");
+        }
     }
 }

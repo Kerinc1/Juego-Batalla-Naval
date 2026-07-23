@@ -32,7 +32,7 @@ public class GamePersistence {
         }
 
         try {
-            String info = String.format("nickname=%s%nbarcosHundidosJugador=%d%nbarcosHundidosMaquina=%d%n",
+            String info = String.format("nombre=%s%nbarcosHundidosJugador=%d%nbarcosHundidosMaquina=%d%n",
                     estado.getJugadorNickname(), estado.contarBarcosHundidosJugador(), estado.contarBarcosHundidosMaquina());
             Files.writeString(SAVE_INFO_FILE, info, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
         } catch (IOException e) {
