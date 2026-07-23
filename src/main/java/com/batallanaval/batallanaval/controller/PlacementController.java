@@ -8,6 +8,9 @@ import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.effect.DropShadow;
@@ -47,7 +50,7 @@ public class PlacementController {
     @FXML
     private TextField nombreField;
     @FXML
-    private Button botonCargarPartida;
+    private Button botonIniciarSesion;
     @FXML
     private Button botonMostrarTablero;
 
@@ -197,7 +200,7 @@ public class PlacementController {
         botonRotar.setOnAction(e -> rotarBarcoSeleccionado());
         botonReiniciar.setOnAction(e -> reiniciarFlota());
         botonIniciarPartida.setOnAction(e -> iniciarPartida());
-        botonCargarPartida.setOnAction(e -> cargarPartida());
+        botonIniciarSesion.setOnAction(e -> iniciarSesion());
         botonMostrarTablero.setOnAction(e -> mostrarTableroOponente());
     }
 
@@ -424,23 +427,53 @@ public class PlacementController {
         return nombreField.getText().trim();
     }
 
-    private void cargarPartida() {
+    private void iniciarSesion() {
+        String nombre = obtenerNombre();
+        if (nombre.isEmpty()) {
+            etiquetaEstado.setText("Debes ingresar un nombre para iniciar sesión.");
+            nombreField.requestFocus();
+            return;
+        }
+
         try {
             GameState estado = persistence.cargar();
-            if (estado == null || estado.estaTerminada()) {
-                etiquetaEstado.setText("No hay una partida válida para cargar.");
+            if (estado == null) {
+                setNickname(nombre);
+                etiquetaEstado.setText("No hay una partida guardada. Coloca tus barcos para iniciar.");
                 return;
             }
+            if (estado.estaTerminada()) {
+                reiniciarFlota();
+                setNickname(nombre);
+                etiquetaEstado.setText("La partida anterior terminó. Coloca tus barcos para iniciar una nueva.");
+                return;
+            }
+
+            ButtonType continuar = new ButtonType("Continuar partida");
+            ButtonType nuevoJuego = new ButtonType("Nuevo juego", ButtonBar.ButtonData.CANCEL_CLOSE);
+            Alert dialogo = new Alert(Alert.AlertType.CONFIRMATION);
+            dialogo.setTitle("Iniciar sesión");
+            dialogo.setHeaderText("Se encontró una partida guardada");
+            dialogo.setContentText("¿Deseas continuar desde el último estado guardado o iniciar un juego nuevo?");
+            dialogo.getButtonTypes().setAll(continuar, nuevoJuego);
+
+            ButtonType opcion = dialogo.showAndWait().orElse(nuevoJuego);
+            if (opcion == nuevoJuego) {
+                reiniciarFlota();
+                setNickname(nombre);
+                return;
+            }
+
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/batallanaval/batallanaval/game-view.fxml"));
             Scene escena = new Scene(loader.load());
             GameController controlador = loader.getController();
             controlador.cargarEstado(estado);
-            Stage escenario = (Stage) botonCargarPartida.getScene().getWindow();
-            escenario.setTitle("Batalla Naval - Partida cargada");
+            Stage escenario = (Stage) botonIniciarSesion.getScene().getWindow();
+            escenario.setTitle("Batalla Naval - Partida continuada");
             escenario.setScene(escena);
             escenario.show();
         } catch (IOException e) {
-            etiquetaEstado.setText("No se pudo cargar la partida guardada.");
+            etiquetaEstado.setText("No se pudo iniciar sesión con la partida guardada.");
         }
     }
 

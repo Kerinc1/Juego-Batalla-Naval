@@ -24,7 +24,7 @@
                 <Label text="Nombre:" style="-fx-font-size: 13; -fx-font-weight: bold; -fx-text-fill: #2D3B46;" />
                 <TextField fx:id="nombreField" promptText="Ingresa tu nombre" />
                 <HBox spacing="8">
-                    <Button fx:id="botonCargarPartida" text="Cargar partida" HBox.hgrow="ALWAYS" />
+                    <Button fx:id="botonIniciarSesion" text="Iniciar sesión" HBox.hgrow="ALWAYS" />
                     <Button fx:id="botonMostrarTablero" text="Ver oponente" HBox.hgrow="ALWAYS" />
                 </HBox>
                 <ScrollPane fitToWidth="true" fitToHeight="true" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS" style="-fx-background-color: transparent; -fx-border-color: transparent;" prefHeight="520">
