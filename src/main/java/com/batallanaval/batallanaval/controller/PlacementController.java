@@ -8,6 +8,9 @@ import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.effect.DropShadow;
@@ -46,8 +49,6 @@ public class PlacementController {
     private Label etiquetaEstado;
     @FXML
     private TextField nombreField;
-    @FXML
-    private Button botonCargarPartida;
     @FXML
     private Button botonMostrarTablero;
 
@@ -197,7 +198,6 @@ public class PlacementController {
         botonRotar.setOnAction(e -> rotarBarcoSeleccionado());
         botonReiniciar.setOnAction(e -> reiniciarFlota());
         botonIniciarPartida.setOnAction(e -> iniciarPartida());
-        botonCargarPartida.setOnAction(e -> cargarPartida());
         botonMostrarTablero.setOnAction(e -> mostrarTableroOponente());
     }
 
@@ -292,16 +292,21 @@ public class PlacementController {
                             ((Pane) nodoActual.getParent()).getChildren().remove(nodoActual);
                         }
 
-                        tablero.colocarBarco(barco, nuevaPosicion);
-                        double nuevoX = margenCoordenadas + columna * Constantes.TAMAÑO_CASILLA;
-                        double nuevoY = margenCoordenadas + fila * Constantes.TAMAÑO_CASILLA;
-                        visualBarco.setLayoutX(nuevoX);
-                        visualBarco.setLayoutY(nuevoY);
-                        tableroPane.getChildren().add(visualBarco);
-                        nodosBarco.put(idBarco, visualBarco);
+                        try {
+                            intentarColocarBarco(barco, nuevaPosicion);
+                            double nuevoX = margenCoordenadas + columna * Constantes.TAMAÑO_CASILLA;
+                            double nuevoY = margenCoordenadas + fila * Constantes.TAMAÑO_CASILLA;
+                            visualBarco.setLayoutX(nuevoX);
+                            visualBarco.setLayoutY(nuevoY);
+                            tableroPane.getChildren().add(visualBarco);
+                            nodosBarco.put(idBarco, visualBarco);
 
-                        seleccionarBarco(barco);
-                        exito = true;
+                            seleccionarBarco(barco);
+                            exito = true;
+                        } catch (InvalidShipPlacementException ex) {
+                            visualBarco.setLayoutX(xInicial);
+                            visualBarco.setLayoutY(yInicial);
+                        }
                     } else {
                         visualBarco.setLayoutX(xInicial);
                         visualBarco.setLayoutY(yInicial);
@@ -380,17 +385,53 @@ public class PlacementController {
      * Inicia la partida.
      */
     private void iniciarPartida() {
-        if (!flota.estáCompletaColocada()) {
-            return;
-        }
-
         String nombre = obtenerNombre();
         if (nombre.isEmpty()) {
+            mostrarAlerta("Falta el nombre", "Ingresa tu nombre para poder iniciar la partida.");
             etiquetaEstado.setText("Debes ingresar un nombre para iniciar la partida.");
             nombreField.requestFocus();
             return;
         }
 
+        GameState partidaGuardada = persistence.cargar(nombre);
+        boolean hayPartidaNoTerminada = partidaGuardada != null && !partidaGuardada.estaTerminada();
+
+        if (hayPartidaNoTerminada) {
+            ButtonType continuar = new ButtonType("Cargar partida anterior", ButtonBar.ButtonData.YES);
+            ButtonType nueva = new ButtonType("Iniciar nueva partida", ButtonBar.ButtonData.OK_DONE);
+            ButtonType cancelar = new ButtonType("Cancelar", ButtonBar.ButtonData.CANCEL_CLOSE);
+            Alert dialogo = new Alert(Alert.AlertType.NONE);
+            dialogo.setTitle("Partida guardada");
+            dialogo.setHeaderText("Ya tienes una partida sin terminar");
+            dialogo.setContentText("¿Quieres cargar la partida anterior o iniciar una nueva partida?");
+            dialogo.getButtonTypes().setAll(continuar, nueva, cancelar);
+
+            Node botonCancelar = dialogo.getDialogPane().lookupButton(cancelar);
+            if (botonCancelar != null) {
+                botonCancelar.setVisible(false);
+                botonCancelar.setManaged(false);
+            }
+
+            Optional<ButtonType> opcion = dialogo.showAndWait();
+            if (opcion.isEmpty() || opcion.get() == cancelar) {
+                return;
+            }
+            if (opcion.get() == continuar) {
+                cargarPartidaGuardada(partidaGuardada);
+                return;
+            }
+        }
+
+        if (!flota.estáCompletaColocada()) {
+            mostrarAlerta("Falta la flota", "Coloca la flota completa antes de iniciar una partida nueva.");
+            etiquetaEstado.setText("Debes colocar la flota completa antes de iniciar la partida.");
+            return;
+        }
+
+        iniciarNuevaPartida(nombre);
+    }
+
+    private void iniciarNuevaPartida(String nombre) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/batallanaval/batallanaval/game-view.fxml"));
             Scene escena = new Scene(loader.load());
@@ -412,6 +453,26 @@ public class PlacementController {
         }
     }
 
+    private void cargarPartidaGuardada(GameState estado) {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/batallanaval/batallanaval/game-view.fxml"));
+            Scene escena = new Scene(loader.load());
+            GameController controlador = loader.getController();
+            controlador.cargarEstado(estado);
+            controlador.setPlayerNickname(estado.getJugadorNickname());
+
+            Stage escenario = (Stage) botonIniciarPartida.getScene().getWindow();
+            escenario.setTitle("Batalla Naval - Partida continuada");
+            escenario.setScene(escena);
+            escenario.setMinWidth(1100);
+            escenario.setMinHeight(840);
+            escenario.show();
+        } catch (IOException e) {
+            e.printStackTrace();
+            etiquetaEstado.setText("No se pudo cargar la partida guardada.");
+        }
+    }
+
     public void setNickname(String nickname) {
         this.nickname = nickname;
         if (nombreField != null) {
@@ -424,33 +485,17 @@ public class PlacementController {
         return nombreField.getText().trim();
     }
 
-    private void cargarPartida() {
-        try {
-            GameState estado = persistence.cargar();
-            if (estado == null || estado.estaTerminada()) {
-                etiquetaEstado.setText("No hay una partida válida para cargar.");
-                return;
-            }
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/batallanaval/batallanaval/game-view.fxml"));
-            Scene escena = new Scene(loader.load());
-            GameController controlador = loader.getController();
-            controlador.cargarEstado(estado);
-            Stage escenario = (Stage) botonCargarPartida.getScene().getWindow();
-            escenario.setTitle("Batalla Naval - Partida cargada");
-            escenario.setScene(escena);
-            escenario.show();
-        } catch (IOException e) {
-            etiquetaEstado.setText("No se pudo cargar la partida guardada.");
-        }
-    }
-
     private void mostrarTableroOponente() {
         Stage escenario = new Stage();
         escenario.setTitle("Tablero oponente");
         Pane pane = new Pane();
-        pane.setPrefSize(420, 420);
-        pane.setStyle("-fx-background-color: #EAF7FC; -fx-border-color: #2F5066; -fx-border-width: 2; -fx-padding: 12;");
+
         double offset = 35;
+        double boardSize = Constantes.TABLERO_TAMAÑO * Constantes.TAMAÑO_CASILLA;
+        double totalSize = offset + boardSize + 12;
+
+        pane.setPrefSize(totalSize, totalSize);
+        pane.setStyle("-fx-background-color: #EAF7FC; -fx-border-color: #2F5066; -fx-border-width: 2;");
         for (int fila = 0; fila < Constantes.TABLERO_TAMAÑO; fila++) {
             Label etiqueta = new Label(String.valueOf(fila + 1));
             etiqueta.setLayoutX(8);
@@ -473,7 +518,7 @@ public class PlacementController {
                 pane.getChildren().add(celda);
             }
         }
-        escenario.setScene(new Scene(pane));
+        escenario.setScene(new Scene(pane, totalSize, totalSize));
         escenario.show();
     }
 
@@ -493,6 +538,14 @@ public class PlacementController {
         );
     }
 
+    private void mostrarAlerta(String titulo, String contenido) {
+        Alert alerta = new Alert(Alert.AlertType.WARNING);
+        alerta.setTitle(titulo);
+        alerta.setHeaderText(null);
+        alerta.setContentText(contenido);
+        alerta.showAndWait();
+    }
+
     /**
      * Actualiza la etiqueta de estado.
      */
@@ -501,7 +554,6 @@ public class PlacementController {
         int total = flota.getCantidadTotal();
 
         etiquetaEstado.setText(String.format("Barcos colocados: %d/%d", colocados, total));
-        botonIniciarPartida.setDisable(!flota.estáCompletaColocada());
 
         if (barcoSeleccionado != null) {
             String estado = barcoSeleccionado.estaColocado() ? "colocado" : "no colocado";
@@ -539,6 +591,14 @@ public class PlacementController {
         }
         Posicion nuevaPosicion = new Posicion(fila, columna);
         return tablero.puedeColocar(barco, nuevaPosicion);
+    }
+
+    private void intentarColocarBarco(Barco barco, Posicion posicion) throws InvalidShipPlacementException {
+        try {
+            tablero.colocarBarco(barco, posicion);
+        } catch (IllegalArgumentException e) {
+            throw new InvalidShipPlacementException("No se puede colocar el barco en esa posición");
+        }
     }
 
     /**
