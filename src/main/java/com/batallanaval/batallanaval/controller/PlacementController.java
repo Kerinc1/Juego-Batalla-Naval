@@ -292,16 +292,21 @@ public class PlacementController {
                             ((Pane) nodoActual.getParent()).getChildren().remove(nodoActual);
                         }
 
-                        tablero.colocarBarco(barco, nuevaPosicion);
-                        double nuevoX = margenCoordenadas + columna * Constantes.TAMAÑO_CASILLA;
-                        double nuevoY = margenCoordenadas + fila * Constantes.TAMAÑO_CASILLA;
-                        visualBarco.setLayoutX(nuevoX);
-                        visualBarco.setLayoutY(nuevoY);
-                        tableroPane.getChildren().add(visualBarco);
-                        nodosBarco.put(idBarco, visualBarco);
+                        try {
+                            intentarColocarBarco(barco, nuevaPosicion);
+                            double nuevoX = margenCoordenadas + columna * Constantes.TAMAÑO_CASILLA;
+                            double nuevoY = margenCoordenadas + fila * Constantes.TAMAÑO_CASILLA;
+                            visualBarco.setLayoutX(nuevoX);
+                            visualBarco.setLayoutY(nuevoY);
+                            tableroPane.getChildren().add(visualBarco);
+                            nodosBarco.put(idBarco, visualBarco);
 
-                        seleccionarBarco(barco);
-                        exito = true;
+                            seleccionarBarco(barco);
+                            exito = true;
+                        } catch (InvalidShipPlacementException ex) {
+                            visualBarco.setLayoutX(xInicial);
+                            visualBarco.setLayoutY(yInicial);
+                        }
                     } else {
                         visualBarco.setLayoutX(xInicial);
                         visualBarco.setLayoutY(yInicial);
@@ -586,6 +591,14 @@ public class PlacementController {
         }
         Posicion nuevaPosicion = new Posicion(fila, columna);
         return tablero.puedeColocar(barco, nuevaPosicion);
+    }
+
+    private void intentarColocarBarco(Barco barco, Posicion posicion) throws InvalidShipPlacementException {
+        try {
+            tablero.colocarBarco(barco, posicion);
+        } catch (IllegalArgumentException e) {
+            throw new InvalidShipPlacementException("No se puede colocar el barco en esa posición");
+        }
     }
 
     /**
